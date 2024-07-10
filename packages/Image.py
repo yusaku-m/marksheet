@@ -4,7 +4,7 @@ import cv2
 import pyautogui
 
 class Image():
-    def __init__(self, path = "", img = ""):
+    def __init__(self, path = "", img = None):
         """
         pathで指定された画像ファイルを開く。ファイル名には全角文字を含めない
         またはimgに与えられた画像を格納する。
