@@ -488,14 +488,18 @@ class Marksheet2():
     """
     def __init__(self, path, row, column,
                  marker_positions, 
-                 direction = "horizontal", monitor = False):
+                 direction = "horizontal", 
+                 threshold = 240,
+                 monitor = False):
         self.sheet = None
         self.path = path
         self.row = row
         self.column = column
         self.marker_positions = marker_positions
         self.direction = direction
+        self.threshold = threshold
         self.monitor = monitor
+        self.grids =[]
 
         if self.monitor is True:
             print("init")
@@ -508,6 +512,12 @@ class Marksheet2():
         if self.monitor is True:
             print("read image shape:", self.sheet.img.shape)
             self.sheet.show("raw")
+    
+    def threshold_check(self):
+
+        ret, bufimage = cv2.threshold(self.sheet.img[:,:,0], self.threshold, 255, cv2.THRESH_BINARY)
+        image = Image(img=bufimage)
+        image.show("check")
 
     def make_reference(self):
         # 画像のサイズを設定
@@ -540,7 +550,7 @@ class Marksheet2():
             image.show("reference")
 
         return image
-
+    
     def rotation(self):
         """
         用紙の向きを調整する。
@@ -693,9 +703,105 @@ class Marksheet2():
             image.show("grid")
 
         return image
+    
+    def mark_check(self):
+        """
+        マークを読み取って結果を配列で返す
+        """
+        result = []
+        for line in self.grids:
+            row = []
+            for grid in line:
+                grid.make_mark()
+                row.append(grid.mark_check())
+            result.append(row)
 
-        # 画像を保存
-        cv2.imwrite('grid_paper.png', image)
+        return np.array(result)
+
+
+
+    def make_grids(self):
+        # 画像のサイズを設定
+        height = self.sheet.img.shape[0]
+        width = self.sheet.img.shape[1]
+
+        # マーク１ブロックのサイズ
+        req_height = height / self.row
+        req_width = width / self.column
+
+        self.grids =[]
+        for r in range(self.row):
+            line =[]
+            for c in range(self.column):
+                img = self.sheet.img[int(r * req_height) : int((r+1) * req_height), 
+                                     int(c * req_width) : int((c+1) * req_width), :]
+                
+                line.append(Markgrid(img, self.threshold, monitor=self.monitor))
+            self.grids.append(line)
+
+class Markgrid():
+    """
+    マークの１マスに関するクラス。
+    
+    img:対象マスの画像
+    """
+
+    def __init__(self, img, threshold, vratio = 0.8, hratio = 0.5, monitor = False):
+
+        self.img = img
+        self.threshold = threshold
+        self.vratio = vratio
+        self.hratio = hratio
+        self.monitor = monitor
+
+    def make_mark(self):
+        """
+        マークの楕円形状を作成
+
+        vratio:枠内でのマークの比率，実際より小さめに設定する
+        """
+        # 画像のサイズを設定
+        height = int(self.img.shape[0])
+        width = int(self.img.shape[1])
+
+        # 楕円半径
+        vradius = int(height * self.vratio / 2)
+        hradius = int(width * self.hratio / 2)
+
+        # 黒い画像を作成
+        image = np.zeros((vradius*2, hradius*2), dtype=np.uint8)
+
+        # 楕円の中心座標
+        center_coordinates = (hradius, vradius)
+
+        # 楕円のサイズ (長軸と短軸の半径)
+        axes_length = (hradius, vradius)  # 半径なので20×30ピクセルの楕円
+
+        # 楕円の色 (黒)
+        color = (255, 255, 255)
+
+        # 楕円を描画
+        cv2.ellipse(image, center_coordinates, axes_length, 0, 0, 360, color, -1)
+
+        if self.monitor is True:
+            cv2.imshow("mark", image)
+            cv2.waitKey(1)
+
+        return image
 
     def mark_check(self):
-        pass
+        """
+        マークとの合致率を計算
+        """
+        ret, bufimage = cv2.threshold(self.img[:,:,0], self.threshold, 255, cv2.THRESH_BINARY)
+        bufimage = 255 - bufimage
+        reference = self.make_mark()
+
+        result_img = cv2.matchTemplate(bufimage, reference, cv2.TM_CCOEFF_NORMED)
+        __min_val, max_val, __min_loc, __max_loc = cv2.minMaxLoc(result_img)
+
+        if self.monitor is True:
+            cv2.imshow("grid",bufimage)
+            cv2.waitKey(1)
+
+        return max_val
