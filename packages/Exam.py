@@ -52,9 +52,9 @@ class Exam():
 
 class Part():
     """大問"""
-    def __init__(self, marks, collects, allocations):
+    def __init__(self, marks, corrects, allocations):
         self.marks = marks
-        self.collects = collects
+        self.corrects = corrects
         self.allocations = allocations
         self.questions = []
         self.score = 0
@@ -74,26 +74,26 @@ class SingleAlphabetPart(Part):
     アルファベット単一回答の大問
     """
 
-    def __init__(self, marks, collects, allocations):
-        super().__init__(marks, collects, allocations)
+    def __init__(self, marks, corrects, allocations):
+        super().__init__(marks, corrects, allocations)
         for q in range(marks.shape[0]):
-            self.questions.append(SingleAlphabetQuestion(marks[q], collects[q], allocations[q]))
+            self.questions.append(SingleAlphabetQuestion(marks[q], corrects[q], allocations[q]))
 
 class DualNumberPart(Part):
     """
     二つの数値を回答する大問
     """
 
-    def __init__(self, marks, collects, allocations):
-        super().__init__(marks, collects, allocations)
-        for q in range(int(marks.shape[0]/4)):
-            self.questions.append(DualNumberQuestion(marks[q], collects[q], allocations[q]))
+    def __init__(self, marks, corrects, allocations):
+        super().__init__(marks, corrects, allocations)
+        for q in range(len(allocations)):
+            self.questions.append(DualNumberQuestion(marks[q*4:q*4+4], corrects[q], allocations[q]))
         
 class Question():
     """小問"""
-    def __init__(self, marks, collect, allocation):
+    def __init__(self, marks, correct, allocation):
         self.marks = marks
-        self.collect = collect
+        self.correct = correct
         self.allocation = allocation
         self.answers = []
         self.score = 0
@@ -112,19 +112,43 @@ class SingleAlphabetQuestion(Question):
     """
     アルファベット単一回答の小門
     """
-    def __init__(self, marks, collect, allocation):
-        super().__init__(marks, collect, allocation)
-        self.answers.append(SingleAlphabetAnswer(marks, collect, allocation))
+    def __init__(self, marks, correct, allocation):
+        super().__init__(marks, correct, allocation)
+        self.answers.append(SingleAlphabetAnswer(marks, correct, allocation))
     
 class DualNumberQuestion(Question):
     """
     2つの数値を回答する小問，順序自由
     """
-    def __init__(self, marks, collect, allocation):
-        super().__init__(marks, collect, allocation)
-        self.answers.append(NumberAnswer(marks, collect, allocation))
-        self.answers.append(NumberAnswer(marks, collect, allocation))
-    
+    def __init__(self, marks, correct, allocation):
+        super().__init__(marks, correct, allocation)
+        self.answers.append(NumberAnswer(marks[0:2], correct[0], allocation/2))
+        self.answers.append(NumberAnswer(marks[2:4], correct[1], allocation/2))
+        self.answers.append(NumberAnswer(marks[0:2], correct[1], allocation/2))
+        self.answers.append(NumberAnswer(marks[2:4], correct[0], allocation/2))
+
+    def scoring(self):
+        self.score=0
+        try:
+            scoreA = 0
+            for answer in self.answers[:2]:
+                answer.scoring()
+                scoreA += answer.score
+
+            scoreB = 0
+            for answer in self.answers[2:]:
+                answer.scoring()
+                scoreB += answer.score
+
+            if scoreB > scoreA:
+                self.score = scoreB
+                self.answers = self.answers[2:]
+            else:
+                self.score = scoreA
+                self.answers = self.answers[:2]
+
+        except:
+            print("question scoring error")
 
 class Answer():
     """回答"""
@@ -178,6 +202,9 @@ class NumberAnswer(Answer):
 
     def scoring(self):
         self.score = 0
+
+        print("correct:", self.correct)
+
         prefixes = [-9, -6, -3, 3, 6, 9]
         unit_character = ["N", "m", "m^2", "m^3", "m^4", "/s", "Pa", "K"]
         unit_prime = [2, 3, 5, 7, 11, 13, 17, 19]
@@ -186,20 +213,19 @@ class NumberAnswer(Answer):
         #正答の取得
         # 浮動小数点型の値を1桁の有効桁数で文字列に変換
         formatted_value = format(self.correct[0], ".0e")
+        #print(formatted_value)
+
         # フォーマットされた文字列から数値部分を抽出
         correct_number = int(formatted_value.split('e')[0])
         correct_exponent = int(formatted_value.split('e')[1])
-        
-        correct_unit = 1
-        for unit in self.correct[1]:
-            correct_unit *= [unit_prime[unit_character.index(s)] for s in unit]
 
+        correct_unit = np.prod([unit_prime[unit_character.index(unit)] for unit in self.correct[1]])
 
         """
         化数
         """
         #符号の取得
-        if self.marks[0,0] is True:
+        if self.marks[0, 0] == 1:
             number_sign = -1
         else:
             number_sign = 1
@@ -219,7 +245,7 @@ class NumberAnswer(Answer):
         """
 
         #符号の取得
-        if self.marks[0,13] is True:
+        if self.marks[0,13] == -1:
             exponent_sign = -1
         else:
             exponent_sign = 1
@@ -238,23 +264,20 @@ class NumberAnswer(Answer):
         単位
         """
         #各単位に素数を割り当てて，積を出し一致していれば
-        unit_answer = self.marks[0, 14:23:2]
-        unit = np.prod(np.where(unit_answer == True, unit_answer, 1))
+        unit_answer = self.marks[1, 8:24:2]
+        #print(unit_answer)
+        unit = np.prod(np.where(unit_answer == True, unit_prime, 1))
 
         #採点
         if unit == correct_unit:
             self.score += self.allocation / 3
+            print("cu")
 
         elif (exponent  <= correct_exponent + 1) and (exponent  >= correct_exponent - 1):
             self.score += self.allocation / 3 * self.partial_score_ratio
 
-        
-
-
-    
-
-
-
+        #print("number:", number,  "exponent", exponent)
+        print("answer:", number * 10 ** exponent , unit)
 
 
 class Equation(Answer):
