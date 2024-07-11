@@ -150,6 +150,17 @@ class DualNumberQuestion(Question):
         except:
             print("question scoring error")
 
+class EquationAndNumberQuestion(Question):
+    """
+    数式と数値両方を回答する小問
+    """
+    def __init__(self, marks, correct, allocation):
+        super().__init__(marks, correct, allocation)
+        self.answers.append(EquationAnswer(marks[0:3], correct[0], allocation/2))
+        self.answers.append(NumberAnswer(marks[3:5], correct[1], allocation/2))
+
+
+
 class Answer():
     """回答"""
     def __init__(self, marks, correct, allocation, partial_score_ratio = 0):
@@ -271,7 +282,6 @@ class NumberAnswer(Answer):
         #採点
         if unit == correct_unit:
             self.score += self.allocation / 3
-            print("cu")
 
         elif (exponent  <= correct_exponent + 1) and (exponent  >= correct_exponent - 1):
             self.score += self.allocation / 3 * self.partial_score_ratio
@@ -280,10 +290,26 @@ class NumberAnswer(Answer):
         print("answer:", number * 10 ** exponent , unit)
 
 
-class Equation(Answer):
-    """数式回答"""
-    def __init__(self, array):
-        pass
-    def scoring():
-        pass
+class EquationAnswer(Answer):
+    """
+    数値回答
+    正解要素は以下３要素，各要素で配点を当分
+    ・文字式
+    ・係数
+    
+    部分点は，以下場合に対してつける
+    ・文字式の次元が一致
+
+    正解判定は，各変数の数値を代入して行う？
+    各変数の数値はどう知る？    
+    correct:数値（m系統一,係数，各変数の数値リスト）のタプル
+
+    """
+    def __init__(self, marks, correct, allocation, partial_score_ratio = 0.5):
+        super().__init__(marks, correct, allocation, partial_score_ratio)
+
+    def scoring(self):
+        self.score = 0
+
+        print("correct:", self.correct)
 
