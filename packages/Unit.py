@@ -141,7 +141,7 @@ class m3(Unit):
         super().__init__(value=unit.value)
 
 class m4(Unit):
-    """超体積の単位"""
+    """断面二次モーメントの単位"""
     def __init__(self):
         unit = m() ** 4
         super().__init__(value=unit.value)

@@ -288,7 +288,7 @@ class Marksheet():
     
     def save(self):
         filename = os.path.splitext(os.path.basename(self.path))[0]
-        self.sheet.save(f"./files/result/image/{filename}.jpg")
+        self.sheet.save(f"./files/result/image/{filename}")
 
         os.makedirs(f"./files/result/csv", exist_ok= True)
         self.result.to_csv(f"./files/result/csv/{filename}.csv")

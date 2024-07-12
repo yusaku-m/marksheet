@@ -54,7 +54,7 @@ class Exam():
 
 class Part():
     """大問"""
-    def __init__(self, marks, corrects, allocations):
+    def __init__(self, marks = [], variables = [], corrects = [], allocations = []):
         self.marks = marks
         self.corrects = corrects
         self.allocations = allocations
@@ -78,9 +78,9 @@ class SingleAlphabetPart(Part):
     """
 
     def __init__(self, marks, corrects, allocations):
-        super().__init__(marks, corrects, allocations)
+        super().__init__(marks=marks, corrects=corrects, allocations=allocations)
         for q in range(marks.shape[0]):
-            self.questions.append(SingleAlphabetQuestion(marks[q], corrects[q], allocations[q]))
+            self.questions.append(SingleAlphabetQuestion(marks=marks[q], correct=corrects[q], allocation=allocations[q]))
 
 class DualNumberPart(Part):
     """
@@ -88,9 +88,9 @@ class DualNumberPart(Part):
     """
 
     def __init__(self, marks, corrects, allocations):
-        super().__init__(marks, corrects, allocations)
+        super().__init__(marks=marks, corrects=corrects, allocations=allocations)
         for q in range(len(allocations)):
-            self.questions.append(DualNumberQuestion(marks[q*4:q*4+4], corrects[q], allocations[q]))
+            self.questions.append(DualNumberQuestion(marks=marks[q*4:q*4+4], correct=corrects[q], allocation=allocations[q]))
         
 class Question():
     """小問"""
@@ -116,19 +116,19 @@ class SingleAlphabetQuestion(Question):
     アルファベット単一回答の小門
     """
     def __init__(self, marks, correct, allocation):
-        super().__init__(marks, correct, allocation)
-        self.answers.append(SingleAlphabetAnswer(marks, correct, allocation))
+        super().__init__(marks=marks, correct=correct, allocation=allocation)
+        self.answers.append(SingleAlphabetAnswer(marks=marks, correct=correct, allocation=allocation))
     
 class DualNumberQuestion(Question):
     """
     2つの数値を回答する小問，順序自由
     """
     def __init__(self, marks, correct, allocation):
-        super().__init__(marks, correct, allocation)
-        self.answers.append(NumberAnswer(marks[0:2], correct[0], allocation/2))
-        self.answers.append(NumberAnswer(marks[2:4], correct[1], allocation/2))
-        self.answers.append(NumberAnswer(marks[0:2], correct[1], allocation/2))
-        self.answers.append(NumberAnswer(marks[2:4], correct[0], allocation/2))
+        super().__init__(marks=marks, correct=correct, allocation=allocation)
+        self.answers.append(NumberAnswer(marks=marks[0:2], correct=correct[0], allocation=allocation/2))
+        self.answers.append(NumberAnswer(marks=marks[2:4], correct=correct[1], allocation=allocation/2))
+        self.answers.append(NumberAnswer(marks=marks[0:2], correct=correct[1], allocation=allocation/2))
+        self.answers.append(NumberAnswer(marks=marks[2:4], correct=correct[0], allocation=allocation/2))
 
     def scoring(self):
         self.score=0
@@ -176,9 +176,9 @@ class EquationAndNumberQuestion(Question):
     数式と数値両方を回答する小問
     """
     def __init__(self, marks, correct, allocation):
-        super().__init__(marks, correct, allocation)
-        self.answers.append(EquationAnswer(marks[0:3], correct[0], allocation/2))
-        self.answers.append(NumberAnswer(marks[3:5], correct[1], allocation/2))
+        super().__init__(marks=marks, corrects=correct, allocations=allocation)
+        self.answers.append(EquationAnswer(marks=marks[0:3], correct=correct[0], allocation=allocation/2))
+        self.answers.append(NumberAnswer(marks=marks[3:5], correct=correct[1], allocation=allocation/2))
 
 
 
@@ -200,7 +200,7 @@ class SingleAlphabetAnswer(Answer):
     correct:単一文字列
     """
     def __init__(self, marks, correct, allocation):
-        super().__init__(marks, correct, allocation)
+        super().__init__(marks=marks, correct=correct, allocation=allocation)
 
     def scoring(self):
         
@@ -230,7 +230,7 @@ class NumberAnswer(Answer):
 
     """
     def __init__(self, marks, correct, allocation, partial_score_ratio = 0.5):
-        super().__init__(marks, correct, allocation, partial_score_ratio)
+        super().__init__(marks=marks, correct=correct, allocation=allocation, partial_score_ratio=partial_score_ratio)
 
     def scoring(self):
         self.score = 0
@@ -329,7 +329,7 @@ class EquationAnswer(Answer):
 
     """
     def __init__(self, marks, correct, allocation, partial_score_ratio = 0.5):
-        super().__init__(marks, correct, allocation, partial_score_ratio)
+        super().__init__(marks=marks, correct=correct, allocation=allocation, partial_score_ratio=partial_score_ratio)
 
     def scoring(self):
         self.score = 0
