@@ -6,6 +6,7 @@ import numpy as np
 
 from .Image import Image
 from .Marksheet import Marksheet
+from . import Unit
 
 class Exam():
     """
@@ -41,6 +42,7 @@ class Exam():
     
     def scoring(self):
         self.score=0
+
         try:
             for i, part in enumerate(self.parts):
                 print("scoring start of Q", i+1)
@@ -61,6 +63,7 @@ class Part():
     
     def scoring(self):
         self.score=0
+
         try:
             for question in self.questions:
                 question.scoring()
@@ -129,6 +132,24 @@ class DualNumberQuestion(Question):
 
     def scoring(self):
         self.score=0
+
+        scoreA = 0
+        for answer in self.answers[:2]:
+            answer.scoring()
+            scoreA += answer.score
+
+        scoreB = 0
+        for answer in self.answers[2:]:
+            answer.scoring()
+            scoreB += answer.score
+
+        if scoreB > scoreA:
+            self.score = scoreB
+            self.answers = self.answers[2:]
+        else:
+            self.score = scoreA
+            self.answers = self.answers[:2]
+
         try:
             scoreA = 0
             for answer in self.answers[:2]:
@@ -214,10 +235,10 @@ class NumberAnswer(Answer):
     def scoring(self):
         self.score = 0
 
-        print("correct:", self.correct)
+        #print("correct:", self.correct)
 
         prefixes = [-9, -6, -3, 3, 6, 9]
-        unit_character = ["N", "m", "m^2", "m^3", "m^4", "/s", "Pa", "K"]
+        unit_classes = [Unit.N(), Unit.m(), Unit.m2(), Unit.m3(), Unit.m4(), Unit.pers(), Unit.Pa(), Unit.K()]
         unit_prime = [2, 3, 5, 7, 11, 13, 17, 19]
 
 
@@ -230,7 +251,7 @@ class NumberAnswer(Answer):
         correct_number = int(formatted_value.split('e')[0])
         correct_exponent = int(formatted_value.split('e')[1])
 
-        correct_unit = np.prod([unit_prime[unit_character.index(unit)] for unit in self.correct[1]])
+        correct_unit = self.correct[1]
 
         """
         化数
@@ -274,20 +295,22 @@ class NumberAnswer(Answer):
         """
         単位
         """
-        #各単位に素数を割り当てて，積を出し一致していれば
-        unit_answer = self.marks[1, 8:24:2]
-        #print(unit_answer)
-        unit = np.prod(np.where(unit_answer == True, unit_prime, 1))
+        #単位が一致していれば正解
+        unit_answers = self.marks[1, 8:24:2]
+        
+        unit= Unit.Unit()
+        for i, unit_answer in enumerate(unit_answers):
+            
+            if unit_answer == 1:
+                unit = unit * unit_classes[i]
 
         #採点
+        #print(unit.value, correct_unit.value)
         if unit == correct_unit:
             self.score += self.allocation / 3
 
-        elif (exponent  <= correct_exponent + 1) and (exponent  >= correct_exponent - 1):
-            self.score += self.allocation / 3 * self.partial_score_ratio
-
         #print("number:", number,  "exponent", exponent)
-        print("answer:", number * 10 ** exponent , unit)
+        #print("answer:", number * 10 ** exponent , unit)
 
 
 class EquationAnswer(Answer):
