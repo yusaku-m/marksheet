@@ -12,7 +12,10 @@ class Unit():
     def __init__(self, index = -1, value = []):
         self.__value = []
 
-        if index != -1:
+        if value is None:
+            value = []
+
+        if index > -1:
             for i in range(index+1):
                 if i == index:
                     self.__value.append(1)
@@ -36,16 +39,39 @@ class Unit():
         """
         単位の積を出力
         """
-        sv, ov = self.convert_to_same_size_numpy(other)
-        
-        return Unit(value=list(sv + ov))
+        try:
+            sv, ov = self.convert_to_same_size_numpy(other)      
+            return Unit(value=list(sv + ov))
+        except:
+            return Unit(value=self.value)
+
+    def __rmul__(self, other):
+        """
+        単位の積を出力（逆版）
+        """
+        return self.__mul__(other)
 
     def __truediv__(self, other):
         """
         単位の商を出力
         """
-        sv, ov = self.convert_to_same_size_numpy(other)
-        return Unit(value=list(sv - ov))
+
+        try:
+            sv, ov = self.convert_to_same_size_numpy(other)
+            return Unit(value=list(sv - ov))
+        except:
+            return Unit(value=self.value)
+
+    def __rtruediv__(self, other):
+        """
+        単位の商を出力（逆方向対応）
+        """
+
+        try:
+            sv, ov = self.convert_to_same_size_numpy(other)
+            return Unit(value=list(ov - sv))
+        except:
+            return Unit(value=self.value)
 
     def __pow__(self, value):
         """
@@ -77,6 +103,11 @@ class Unit():
             sv = np.pad(sv, (0, -pad), mode='constant', constant_values=0)
 
         return sv, ov
+
+class non(Unit):
+    """無次元の単位"""
+    def __init__(self):
+        super().__init__()
 
 class m(Unit):
     """長さの単位"""

@@ -54,14 +54,132 @@ class Exam():
 
 class Part():
     """大問"""
-    def __init__(self, marks = [], variables = [], corrects = [], allocations = []):
+    def __init__(self, marks = [], 
+                 variables = [], 
+                 unit_classes = [],
+                 corrects = [], 
+                 allocations = [], 
+                 questions_classes = [], 
+                 partial_score_ratio = 0
+                 ):
+
         self.marks = marks
+        self.variables = variables
+        self.unit_classes = unit_classes
         self.corrects = corrects
         self.allocations = allocations
+        self.questions_classes = questions_classes
+        self.partial_score_ratio = partial_score_ratio
         self.questions = []
         self.score = 0
+
+        if len(self.questions_classes) > 0:
+            self.make_questions()
     
+    def make_questions(self):
+        """
+        与えられた質問クラスリストで質問を作成する。
+        """
+        self.questions = []
+        question_rownumber = len(self.marks) / len(self.question_classes)
+        qr = question_rownumber
+
+        for i, question_class in enumerate(self.question_classes):
+            self.questions.append(
+                question_class(
+                    marks =      self.marks[qr*i : qr*(i+1)],
+                    variables =  self.variables,
+                    correct =    self.corrects[i],
+                    allocation = self.allocations[i]
+                    )
+                )
+            
+    def update_variables_and_corrects(self):
+        """
+        {name, value, unit, first difine}の辞書の不足要素を補う。
+        """
+
+        # 変数名とその値，式，単位を辞書に格納
+        value_dict = {}; equation_dict = {}; unit_dict = {} 
+        for var in self.variables:
+            if 'value' in var:
+                value_dict[var['name']] = var['value']
+            if 'equation' in var:
+                equation_dict[var['name']] = var['equation']
+            if 'unit' in var:
+                unit_dict[var['name']] = var['unit']
+        print(value_dict)
+        print(equation_dict)
+        print(unit_dict)
+
+        # valueのない要素にequationを基にした値を追加
+        for var in self.variables:
+            if 'value' not in var and 'equation' in var:
+                
+                # equationを評価するために必要な変数を準備
+                equation = var['equation']
+                for key, value in value_dict.items():
+                    equation = equation.replace(f" {key} ", str(value))
+
+                # equationを評価して値を求める
+                try:
+                    var['value'] = eval(equation)
+
+                except Exception as e:
+                    print(f"Error evaluating equation for {var['name']}: {e}")
+
+                # unitを評価して単位を求める
+                unit = var["equation"]
+                for key, value in unit_dict.items():
+                    unit = unit.replace(f" {key} ", f"Unit.{str(value)}()")
+
+                try:
+                    var['unit'] = eval(unit)
+
+                except Exception as e:
+                    print(f"Error evaluating unit for {var['name']}. you can check or add unit list on Unit.py: {e}")
+                    
+
+        # correctsの計算
+        for correct in self.corrects:
+            equation = correct['equation']
+
+            #数式へ置換
+            for key, value in equation_dict.items():
+                equation = equation.replace(f" {key} ", f"({str(value)})")
+
+            #値へ置換
+            for key, value in value_dict.items():
+                equation = equation.replace(f" {key} ", str(value))
+
+            try:
+                correct['value'] = eval(equation)
+                
+
+            except Exception as e:
+                print(f"Error evaluating equation for {correct['name']}: {e}")
+
+            # unitを評価して単位を求める
+            unit = correct["equation"]
+            # ()は除去
+            unit = unit.replace(f"(", f"")
+            unit = unit.replace(f")", f"")
+
+            #単位が存在する部分を置換
+            for key, value in unit_dict.items():
+                unit = unit.replace(f" {key} ", f"Unit.{str(value)}()")
+            print(unit)
+
+            try:
+                correct['unit'] = eval(unit)
+
+            except Exception as e:
+                print(f"Error evaluating unit for {correct['name']}. you can check or add unit list on Unit.py: {e}")
+
+            print(f"{correct['name']}: {str(correct['value'])[:30]} [{correct['unit'].value}] ({equation})")            
+
     def scoring(self):
+
         self.score=0
 
         try:
@@ -71,6 +189,56 @@ class Part():
 
         except:
             print("part scoring error")
+
+class Question():
+    """小問"""
+    def __init__(self, marks = [], 
+                 variables = [], 
+                 unit_classes = [],
+                 correct = [], 
+                 allocation = [],
+                 partial_score_ratio = 0):
+        self.marks = marks
+        self.variables = variables
+        self.unit_classes = unit_classes
+        self.correct = correct
+        self.allocation = allocation
+        self.partial_score_ratio = partial_score_ratio
+        self.answers = []
+        self.score = 0
+
+    def scoring(self):
+        self.score=0
+        try:
+            for answer in self.answers:
+                answer.scoring()
+                self.score += answer.score
+
+        except:
+            print("question scoring error")      
+
+class Answer():
+    """回答"""
+    def __init__(self, marks = [], 
+                 variables = [], 
+                 unit_classes = [],
+                 correct = [], 
+                 allocation = [], 
+                 partial_score_ratio = 0):
+        self.marks = marks
+        self.variables = variables
+        self.correct = correct
+        self.allocation = allocation
+        self.score = 0
+        self.partial_score_ratio = partial_score_ratio
+
+    def scoring(self):
+        pass
+
+
+"""
+Parts=============================================================================================================================
+"""
 
 class SingleAlphabetPart(Part):
     """
@@ -91,25 +259,10 @@ class DualNumberPart(Part):
         super().__init__(marks=marks, corrects=corrects, allocations=allocations)
         for q in range(len(allocations)):
             self.questions.append(DualNumberQuestion(marks=marks[q*4:q*4+4], correct=corrects[q], allocation=allocations[q]))
-        
-class Question():
-    """小問"""
-    def __init__(self, marks, correct, allocation):
-        self.marks = marks
-        self.correct = correct
-        self.allocation = allocation
-        self.answers = []
-        self.score = 0
 
-    def scoring(self):
-        self.score=0
-        try:
-            for answer in self.answers:
-                answer.scoring()
-                self.score += answer.score
-
-        except:
-            print("question scoring error")        
+"""
+questions=============================================================================================================================
+"""
 
 class SingleAlphabetQuestion(Question):
     """
@@ -173,26 +326,19 @@ class DualNumberQuestion(Question):
 
 class EquationAndNumberQuestion(Question):
     """
-    数式と数値両方を回答する小問
+    variables: 変数一覧，マークシートのマーク順に並べる，マークにない変数はそれ以降に，
+    変数名，単位，最初に定義される小問番号（本文の場合0）で構成
+    
+    correct:数式の文字列，動的な変数名は必ず両側へスペースを加える
     """
-    def __init__(self, marks, correct, allocation):
-        super().__init__(marks=marks, corrects=correct, allocations=allocation)
+    def __init__(self, marks = [], variables = [], correct = [], allocation = []):
+        super().__init__(marks=marks, variables=variables, corrects=correct, allocations=allocation)
         self.answers.append(EquationAnswer(marks=marks[0:3], correct=correct[0], allocation=allocation/2))
         self.answers.append(NumberAnswer(marks=marks[3:5], correct=correct[1], allocation=allocation/2))
 
-
-
-class Answer():
-    """回答"""
-    def __init__(self, marks, correct, allocation, partial_score_ratio = 0):
-        self.marks = marks
-        self.correct = correct
-        self.allocation = allocation
-        self.score = 0
-        self.partial_score_ratio = partial_score_ratio
-
-    def scoring():
-        pass
+"""
+answers=============================================================================================================================
+"""
 
 class SingleAlphabetAnswer(Answer):
     """
@@ -239,7 +385,6 @@ class NumberAnswer(Answer):
 
         prefixes = [-9, -6, -3, 3, 6, 9]
         unit_classes = [Unit.N(), Unit.m(), Unit.m2(), Unit.m3(), Unit.m4(), Unit.pers(), Unit.Pa(), Unit.K()]
-        unit_prime = [2, 3, 5, 7, 11, 13, 17, 19]
 
 
         #正答の取得
@@ -312,27 +457,28 @@ class NumberAnswer(Answer):
         #print("number:", number,  "exponent", exponent)
         #print("answer:", number * 10 ** exponent , unit)
 
-
 class EquationAnswer(Answer):
     """
-    数値回答
-    正解要素は以下３要素，各要素で配点を当分
-    ・文字式
+    数式回答。正解要素は以下ｘ要素，各要素で配点を当分
+    ・文字式（値が一致する組み合わせ）
     ・係数
     
     部分点は，以下場合に対してつける
     ・文字式の次元が一致
 
-    正解判定は，各変数の数値を代入して行う？
-    各変数の数値はどう知る？    
-    correct:数値（m系統一,係数，各変数の数値リスト）のタプル
 
+    variables:名前，数式，値，単位を含む辞書型
+    correct:名前，数式，値，単位を含む辞書型
     """
-    def __init__(self, marks, correct, allocation, partial_score_ratio = 0.5):
-        super().__init__(marks=marks, correct=correct, allocation=allocation, partial_score_ratio=partial_score_ratio)
+    def __init__(self, marks, variables, correct, allocation, partial_score_ratio = 0.5):
+        super().__init__(marks=marks, variables=variables, correct=correct, allocation=allocation, partial_score_ratio=partial_score_ratio)
 
     def scoring(self):
         self.score = 0
 
         print("correct:", self.correct)
 
+
+
+
+        #数式指定の変数定義
