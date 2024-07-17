@@ -35,6 +35,18 @@ class Unit():
         """
         return  self.__value
 
+    def __str__(self):
+        result = "  "
+        units = ["m","kg","s","A","K","mol","cd"]
+        for unit, power in zip(units, self.value):
+            if power != 0:
+                result += f"{unit}^{power} * "
+
+        return result[:-2]
+    
+    def __repr__(self):
+        return self.__str__()
+
     def __mul__(self, other):
         """
         単位の積を出力
