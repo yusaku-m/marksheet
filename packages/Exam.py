@@ -184,16 +184,28 @@ class Answer():
 
         #内部のステータス変数
         self.score = 0
-        self.__string = "" #回答を示す文字列
+        self.string = "" #回答を示す文字列
 
     def __str__(self):
-        return self.__string
+        if self.string == "":
+            self.string = self.get_answer_string()
+        
+        return self.string
     
     def __repr__(self):
         return self.__str__()
-
+    
     def scoring(self):
+        """
+        採点
+        """
         pass
+
+    def get_answer_string(self):
+        """
+        回答の文字列を取得
+        """
+        return ""
 
 
 """
@@ -316,8 +328,6 @@ class SingleAlphabetAnswer(Answer):
     単一アルファベット回答
     correct:単一文字列
     """
-    def __init__(self, marks, correct, allocation):
-        super().__init__(marks=marks, correct=correct, allocation=allocation)
 
     def scoring(self):
         
@@ -330,6 +340,14 @@ class SingleAlphabetAnswer(Answer):
             self.score = self.allocation
         else:
             self.score = 0
+    
+    def get_answer_string(self):
+        """
+        回答の文字列を取得
+        """
+        number = np.array(range(len(self.marks)))
+        answer = chr(np.sum(number * np.array(self.marks)) + 65)
+        return answer
 
 class NumberAnswer(Answer):
     """
@@ -348,19 +366,16 @@ class NumberAnswer(Answer):
     """
 
     def scoring(self):
-
         self.score = 0
+        answer_string = str(self)
 
-        #print(self.unit_instances)
-
-        #print("correct:", self.correct)
-
-        prefixes = [-9, -6, -3, 3, 6, 9]
+        number = int(answer_string.split('e')[0])
+        exponent = int(answer_string.split('e')[1].split(' ')[0])
+        unit =  self.get_unit()
 
         #正答の取得
         # 浮動小数点型の値を1桁の有効桁数で文字列に変換
         formatted_value = format(self.correct['value'], ".0e")
-        #print(formatted_value)
 
         # フォーマットされた文字列から数値部分を抽出
         correct_number = int(formatted_value.split('e')[0])
@@ -368,6 +383,27 @@ class NumberAnswer(Answer):
 
         correct_unit = self.correct['unit']
 
+        #数値採点
+        if number == correct_number:
+            self.score += self.allocation / 3
+
+        elif abs(number) == abs(correct_number):
+            self.score += self.allocation / 3 * self.partial_score_ratio
+
+        #桁採点
+        if exponent == correct_exponent:
+            self.score += self.allocation / 3
+
+        elif (exponent  <= correct_exponent + 1) and (exponent  >= correct_exponent - 1):
+            self.score += self.allocation / 3 * self.partial_score_ratio
+
+        #単位採点
+        if unit == correct_unit:
+            self.score += self.allocation / 3
+
+        print("correct:", float(correct_number) * 10 ** float(correct_exponent) , correct_unit," ===== answer:", float(number) * 10 ** float(exponent) , unit)
+
+    def get_answer_string(self):
         """
         化数
         """
@@ -380,53 +416,32 @@ class NumberAnswer(Answer):
         #値の取得
         number = sum(self.marks[0, 3:13] * np.array(range(10))) * number_sign
 
-        #採点
-        if number == correct_number:
-            self.score += self.allocation / 3
-
-        elif abs(number) == abs(correct_number):
-            self.score += self.allocation / 3 * self.partial_score_ratio
-
         """
         指数
         """
-
         #符号の取得
         if self.marks[0,15] == 1:
             exponent_sign = -1
         else:
             exponent_sign = 1
-
         #値の取得
+        prefixes = [-9, -6, -3, 3, 6, 9]
         exponent = sum(self.marks[0, 16:25] * np.array(range(1,10))) * exponent_sign + sum(self.marks[1, 2:8] * np.array(prefixes))
 
-        #採点
-        if exponent == correct_exponent:
-            self.score += self.allocation / 3
+        return f"{number}e{exponent} {self.get_unit()}"
+    
+    def get_unit(self):
 
-        elif (exponent  <= correct_exponent + 1) and (exponent  >= correct_exponent - 1):
-            self.score += self.allocation / 3 * self.partial_score_ratio
-        
-        """
-        単位
-        """
-        #単位が一致していれば正解
         unit_answers = self.marks[1, 10:27:2]
         unit= Unit.Unit()
+
         for i, unit_answer in enumerate(unit_answers):
             
             if unit_answer == 1:
-                #print(i,self.unit_instances)
                 unit = unit * self.unit_instances[i]
 
-        #採点
-        #print(unit.value, correct_unit.value)
-        if unit == correct_unit:
-            self.score += self.allocation / 3
+        return unit
 
-        #print("number:", number,  "exponent", exponent)
-        print("correct:", float(correct_number) * 10 ** float(correct_exponent) , correct_unit," ===== answer:", float(number) * 10 ** float(exponent) , unit)
-        
 class EquationAnswer(Answer):
     """
     数式回答。正解要素は以下ｘ要素，各要素で配点を当分
@@ -443,9 +458,20 @@ class EquationAnswer(Answer):
     def scoring(self):
         self.score = 0
 
-        #print("correct:", self.correct)
+        answer_string = str(self)
+        
+        value, unit = eval_equation(answer_string, self.variables)
+        
+        #数値一致？（完答）
+        if np.allclose(np.array(self.correct['value']), np.array(value)):
+            self.score += self.allocation
+        elif unit == self.correct['unit']: #次元一致？（部分点）
+            self.score += self.allocation * self.partial_score_ratio
 
-        """回答の数値取得"""
+
+    def get_answer_string(self):
+
+        """回答の文字列取得"""
         #符号取得
         if self.marks[0, 3] == 1:
             number_sign = -1
@@ -469,13 +495,11 @@ class EquationAnswer(Answer):
         #係数（範囲上限フラグ）取得
         number_error = (self.marks[0, 13] == 1) or (self.marks[0, 25] == 1)
 
-
         #文字式（分子）取得
         if number_error == 1:
-            equation = f"{get_coefficient(self.correct['equation'],self.variables)} "
-        elif number_error == 0:
-            equation = f"{number_child} / {number_mother} "
+            number_child, number_mother= get_coefficient(self.correct['equation'],self.variables)
 
+        equation = f"{number_child} / {number_mother} "
 
         for i, char in enumerate(self.marks[1, 4:26:2]):
             if char == 1:
@@ -485,15 +509,8 @@ class EquationAnswer(Answer):
         for i, char in enumerate(self.marks[2, 4:26:2]):
             if char == 1:
                 equation += f"/ {self.variables[i]['name']} "  
-
-        value, unit = eval_equation(equation, self.variables)
         
-
-        #数値一致？（完答）
-        if np.allclose(np.array(self.correct['value']), np.array(value)):
-            self.score += self.allocation
-        elif unit == self.correct['unit']: #次元一致？（部分点）
-            self.score += self.allocation * self.partial_score_ratio
+        return equation.replace("1 /","").replace("1 *","")
 
 def eval_equation(equation_string, variables):
     """
@@ -537,9 +554,22 @@ def eval_equation(equation_string, variables):
 
 def get_coefficient(equation_string, variables):
     equation = equation_string
-    
-    # すべての変数を1に置き換え
-    for var in variables:
-        equation = re.sub(r'\b{}\b'.format(var['name']), '1', equation)
 
-    return eval(equation)
+    # 変数名を正規表現で抽出
+    var_pattern = r'\b(?:{})\b'.format('|'.join([re.escape(var["name"]) for var in variables]))
+    
+    # 式の中から変数名を置き換える
+    equation = re.sub(var_pattern, '1', equation)
+    
+    # 分母と分子を分離
+    parts = re.split(r'/', equation)
+    
+    # 分子を評価
+    numerator = eval(parts[0])
+    
+    # 分母を評価（存在する場合）
+    denominator = 1
+    if len(parts) > 1:
+        denominator = eval('/'.join(parts[1:]))
+    
+    return int(numerator), int(denominator)
