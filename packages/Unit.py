@@ -1,10 +1,12 @@
 import numpy as np
+import sys
+import inspect
 
 class Unit():
     """
     次元解析を想定したクラス。
     引数無しで初期化した場合は無次元
-    値はリスト形式
+    値は基本単位次数のリスト形式
     各基本単位はsi基本単位の順番に対応する固有インデックスを持つ。
     インデックスの値が各基本単位の指数に相当する。
     """
@@ -36,13 +38,33 @@ class Unit():
         return  self.__value
 
     def __str__(self):
-        result = "  "
+
+        #単位定義一覧を取得
+        module = sys.modules[__name__]
+
+        class_names = [
+            name for name, obj in inspect.getmembers(module) if inspect.isclass(obj)
+            ]
+
+        #定義のある単位名であれば該当名を返す        
+        for class_name in class_names:
+            if class_name != "Unit":
+                instance = getattr(module, class_name)()
+
+                if instance == self:
+                    return instance.__class__.__name__.replace("non","-").replace("_per_","/").replace("per_","/").replace("per","/")
+
+        #定義のない単位名であれば基本単位の組み合わせを返す 
+        result = ""
         units = ["m","kg","s","A","K","mol","cd"]
         for unit, power in zip(units, self.value):
             if power != 0:
-                result += f"{unit}^{power} * "
+                if power == 1:
+                    result += f"{unit}·"
+                else:
+                    result += f"{unit}^{power}·"
 
-        return result[:-2]
+        return result
     
     def __repr__(self):
         return self.__str__()
@@ -193,10 +215,4 @@ class pers(Unit):
     """毎秒の単位"""
     def __init__(self):
         unit = Unit() / s()
-        super().__init__(value=unit.value)
-
-class J(Unit):
-    """エネルギーの単位"""
-    def __init__(self):
-        unit = N() * m()
         super().__init__(value=unit.value)

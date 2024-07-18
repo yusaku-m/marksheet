@@ -20,7 +20,7 @@ class Exam():
         self.parts = []
         self.marks = []
         self.score = 0
-    
+
     def get_marks(self):
         self.marks = []
 
@@ -80,7 +80,8 @@ class Part():
 
         if len(self.question_classes) > 0:
             self.make_questions()
-    
+
+
     def make_questions(self):
         """
         与えられた質問クラスリストで質問を作成する。
@@ -145,6 +146,7 @@ class Question():
                  correct = [], 
                  allocation = [],
                  partial_score_ratio = 0):
+        
         self.marks = marks
         self.variables = variables
         self.unit_instances = unit_instances
@@ -153,6 +155,7 @@ class Question():
         self.partial_score_ratio = partial_score_ratio
         self.answers = []
         self.score = 0
+
 
     def scoring(self):
         self.score=0
@@ -177,8 +180,17 @@ class Answer():
         self.unit_instances = unit_instances
         self.correct = correct
         self.allocation = allocation
-        self.score = 0
         self.partial_score_ratio = partial_score_ratio
+
+        #内部のステータス変数
+        self.score = 0
+        self.__string = "" #回答を示す文字列
+
+    def __str__(self):
+        return self.__string
+    
+    def __repr__(self):
+        return self.__str__()
 
     def scoring(self):
         pass
@@ -232,7 +244,7 @@ class DualNumberQuestion(Question):
         self.answers.append(NumberAnswer(marks=marks[2:4], unit_instances=unit_instances, correct=correct[0], allocation=allocation/2))
 
     def scoring(self):
-        self.score=0
+        self.score = 0
 
         scoreA = 0
         for answer in self.answers[:2]:
@@ -478,8 +490,7 @@ class EquationAnswer(Answer):
         
 
         #数値一致？（完答）
-        #print(value, self.correct['value'])
-        if (np.array(self.correct['value'])*0.9 < np.array(value) ).all() and (np.array(value) < np.array(self.correct['value'])*1.1).all():
+        if np.allclose(np.array(self.correct['value']), np.array(value)):
             self.score += self.allocation
         elif unit == self.correct['unit']: #次元一致？（部分点）
             self.score += self.allocation * self.partial_score_ratio
