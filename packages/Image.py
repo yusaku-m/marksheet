@@ -57,7 +57,7 @@ class Image():
         cv2.imshow(windowname, img)
         cv2.waitKey(waittime)
     
-    def save(self, path, overwrite = False, monitor = False):
+    def save(self, path, overwrite = True, monitor = False):
         """
         指定パスへjpgとして保存
         overwrite: trueなら上書き
