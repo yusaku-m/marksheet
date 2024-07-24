@@ -510,7 +510,7 @@ class EquationAnswer(Answer):
             if char == 1:
                 equation += f"/ {self.variables[i]['name']} "  
         
-        return equation.replace("1 /","").replace("1 *","")
+        return equation.replace("1 / 1 *","").replace("1 *","")
 
 def eval_equation(equation_string, variables):
     """
