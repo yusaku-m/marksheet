@@ -493,12 +493,19 @@ class EquationAnswer(Answer):
         number_mother = (sum(self.marks[0, 17:25] * np.array(range(1,9)))+1)
 
         #係数（範囲上限フラグ）取得
-        number_error = (self.marks[0, 13] == 1) or (self.marks[0, 25] == 1)
+        number_child_error = (self.marks[0, 13] == 1) or (self.marks[0, 25] == 1)
+        number_mother_error = (self.marks[0, 13] == 1) or (self.marks[0, 25] == 1)
+
+        # 桁が２桁以上の場合置き換え
+        correct_number_child, correct_number_mother= get_coefficient(self.correct['equation'],self.variables)
+
+        if number_child_error == 1 and correct_number_child > 9:
+            number_child = correct_number_child
+
+        if number_mother_error == 1 and correct_number_mother > 9:
+            number_mother = correct_number_mother
 
         #文字式（分子）取得
-        if number_error == 1:
-            number_child, number_mother= get_coefficient(self.correct['equation'],self.variables)
-
         equation = f"{number_child} / {number_mother} "
 
         for i, char in enumerate(self.marks[1, 4:26:2]):
