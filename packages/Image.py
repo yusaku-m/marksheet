@@ -4,7 +4,7 @@ import cv2
 import pyautogui
 
 class Image():
-    def __init__(self, path = "", img = None):
+    def __init__(self, path = "", img = ""):
         """
         pathで指定された画像ファイルを開く。ファイル名には全角文字を含めない
         またはimgに与えられた画像を格納する。
@@ -20,8 +20,10 @@ class Image():
                 os.chdir(currentpath)
             else:
                 img = cv2.imread(path)
-
-        #print(img.shape)
+        try:
+           test = img.shape
+        except:
+            raise ValueError(f"Image file {path} is not found or not supported format")
 
         self.img = img
 
@@ -57,7 +59,7 @@ class Image():
         cv2.imshow(windowname, img)
         cv2.waitKey(waittime)
     
-    def save(self, path, overwrite = True, monitor = False):
+    def save(self, path, overwrite = False, monitor = False):
         """
         指定パスへjpgとして保存
         overwrite: trueなら上書き

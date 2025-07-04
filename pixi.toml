@@ -1,0 +1,15 @@
+[workspace]
+authors = ["Yusaku_MAEDA13 <jagaimo13@gmail.com>"]
+channels = ["conda-forge"]
+name = "marksheet"
+platforms = ["win-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+ipykernel = ">=6.29.5,<7"
+opencv = ">=4.11.0,<5"
+pyautogui = ">=0.9.54,<0.10"
+pandas = ">=2.3.0,<3"
+numpy = ">=2.3.1,<3"
